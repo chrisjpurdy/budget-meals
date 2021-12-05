@@ -5,11 +5,12 @@ import json
 
 def find_recipe_data(url):
     r = requests.get(url)
-    assert r.encoding == "utf8", "Encoding of returned data was incorrect - utf8 required!"
+    #assert r.encoding == "utf8", "Encoding of returned data was incorrect - utf8 required!"
 
     tree = html.fromstring(r.text)
 
     recipe_json = {
+        "@type": "RatedRecipe",
         "rating": None,
         "recipe": None
     }
@@ -43,7 +44,6 @@ def find_recipies_bbcgoodfood():
 
     tree = html.fromstring(r.text)
     tree.xpath()
-
 
 
 if __name__ == "__main__":
