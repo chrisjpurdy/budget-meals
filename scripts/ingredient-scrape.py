@@ -1,36 +1,45 @@
-from lxml import html
-from mongo_api import save_ingredient_to_db
+from mongo_api import save_ingredient_to_db, save_ingredients_to_db
 from playwright.sync_api import sync_playwright
+from bs4 import BeautifulSoup
 
-def convert_tesco_ingredient(ingredient_element, i):
+def convert_tesco_ingredient(ingredient_element):
     # Ingredient object template
     ingredient = {
         "name": None,
         "price": None,
-        "pricePerUnit": None,
         "unit": None,
         "url": None,
         "imgUrl": None
     }
 
-    title = ingredient_element.xpath("//a[contains(@data-auto, 'product-tile--title')]")
-    ingredient["name"] = title[i].text_content()
-    ingredient["url"] = title[i].get("href")
+    title = ingredient_element.find(attrs={'data-auto': 'product-tile--title'})
+    ingredient["name"] = title.contents[0]
+    ingredient["url"] = title["href"]
 
-    price = ingredient_element.xpath("//div[contains(@class, 'price-per-sellable-unit')]//span[contains(@data-auto, 'price-value')]")
-    ingredient["price"] = price[i].text_content()
+    price = ingredient_element.find(class_="price-per-sellable-unit").find("span", attrs={'data-auto': 'price-value'})
+    ingredient["price"] = price.contents[0]
 
-    price_per_unit = ingredient_element.xpath("//div[contains(@class, 'price-per-quantity-weight')]//span[contains(@data-auto, 'price-value')]")
-    ingredient["pricePer"] = price_per_unit[i].text_content()
+    price_per_unit = ingredient_element.find(class_="price-per-quantity-weight").find("span", attrs={'data-auto': 'price-value'})
+    ingredient["pricePer"] = price_per_unit.contents[0]
 
-    unit = ingredient_element.xpath("//div[contains(@class, 'price-per-quantity-weight')]//span[contains(@class, 'weight')]")
-    ingredient["unit"] = unit[i].text_content()
+    unit = ingredient_element.find(class_="price-per-quantity-weight").find("span", class_="weight")
+    ingredient["unit"] = unit.contents[0]
 
-    image = ingredient_element.xpath("//div[contains(@class, 'product-image__container')]/img")
-    ingredient["imgUrl"] = image[i].get("src")
+    image = ingredient_element.find(class_="product-image__container").find("img")
+    ingredient["imgUrl"] = image["src"]
 
-    #print("Ingredient scraped: ", end="")
-    #print(ingredient)
+    def extractPromoData(promotion_li):
+        offer = promotion_li.find("span", class_="offer-text").contents[0]
+        dates = promotion_li.find("span", class_="dates").contents[0]
+        return {
+            "offer": offer,
+            "dates": dates,
+
+        }
+
+    promotions = ingredient_element.find("ul", class_="product-promotions")
+    if (promotions):
+        ingredient["promotions"] = list(map(extractPromoData, promotions.find_all("li", class_="product-promotion")))
 
     return ingredient
 
@@ -41,12 +50,14 @@ def tesco_playwright_scrape():
         page = browser.new_page()
         page.goto("https://www.tesco.com/groceries/en-GB/shop/fresh-food/all")
 
-        tree = html.document_fromstring(page.content())
-        ingredients = [convert_tesco_ingredient(val, i) for i, val in enumerate(tree.find_class("product-tile"))]
+        soup = BeautifulSoup(page.content(), features="lxml")
+        ingredients = [convert_tesco_ingredient(product) for product in soup.find_all("div", class_="product-tile")]
         browser.close()
         return ingredients
 
 
 if __name__ == '__main__':
-    for ingredient in tesco_playwright_scrape():
-        save_ingredient_to_db(ingredient)
+    ingredients = tesco_playwright_scrape()
+    #print(ingredients[0])
+    #save_ingredient_to_db(ingredients[0])
+    save_ingredients_to_db(ingredients)

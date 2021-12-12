@@ -1,7 +1,7 @@
 import requests
 import json
 
-API_KEY = "gi8655avHrN3ZW5Ph31v99PzEsL4Noh6Dr9uklsOrVe4D9Qw08mtt8CCXzw91Ofy"
+API_KEY = "jWXbi4nWZuRWar0RJ7nLsGg8nvxZsOdXg8OpH5gHUDGMbunm93hwIzemiLJpDkWV"
 
 ENDPOINT = "https://data.mongodb-api.com/app/data-elech/endpoint/data/beta"
 
@@ -12,10 +12,26 @@ def save_ingredient_to_db(ingredient):
         "api-key": API_KEY
     }
     response = requests.post(ENDPOINT + "/action/insertOne", headers=headers, json={
-        "dataSource": "Recipes",
-        "database": "ScrapedData",
-        "collection": "Ingredients",
+        "dataSource": "ScrapedData",
+        "database": "Ingredients",
+        "collection": "Tesco",
         "document": ingredient
     })
+    print(response.text)
+    print(response.reason)
     # check that x is an ok response
 
+
+def save_ingredients_to_db(ingredients):
+    headers = {
+        "Content-Type": "application/json",
+        "Access-Control-Request-Headers": "*",
+        "api-key": API_KEY
+    }
+    response = requests.post(ENDPOINT + "/action/insertMany", headers=headers, json={
+        "dataSource": "ScrapedData",
+        "database": "Ingredients",
+        "collection": "Tesco",
+        "documents": ingredients
+    })
+    # check that x is an ok response
